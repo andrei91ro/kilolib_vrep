@@ -35,8 +35,11 @@ if (sim_call_type==sim_childscriptcall_actuation) then
  
  
 -- Kilobot Model
-		-- K-Team S.A.
-	    -- 2013.06.24  
+		-- K-Team S.A. --initial version
+	    -- 2013.06.24
+		
+		-- Andrei G. Florea --curent kilolib (kilobotics.com) adapted version
+		-- 09 November 2015
 		
 		-- Add your own program in function user_prgm() , after the comment "user program code goes below"
 	
@@ -78,10 +81,10 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		RATIO_MOTOR = 10/255 -- ratio for getting 100% = 1cm/s or 45deg/s
 	
 		-- 4 constants that are calibration values used with the motors
-		cw_in_place     = 200 -- value for cw motor to turn the robot cw in place (note: ccw motor should be off)
-		ccw_in_place    = 200 -- value for ccw motor to turn the robot ccw in place (note: cw motor should be off) 
-		cw_in_straight  = 200 -- value for the cw motor to move the robot in the forward direction
-		ccw_in_straight = 200 -- value for the ccw motor to move the robot in the forward direction 
+		kilo_turn_right     = 200 -- value for cw motor to turn the robot cw in place (note: ccw motor should be off)
+		kilo_turn_left    = 200 -- value for ccw motor to turn the robot ccw in place (note: cw motor should be off) 
+		kilo_straight_right  = 200 -- value for the cw motor to move the robot in the forward direction
+		kilo_straight_left = 200 -- value for the ccw motor to move the robot in the forward direction 
 	
 	
 	    -- for battery management
@@ -151,8 +154,8 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 			simAddStatusbarMessage(simGetScriptName(sim_handle_self).." ambient light:"..get_ambient_light())
 	
 			-- Set speed
-			-- set_motor(cw_in_place,0)
-			set_motor(cw_in_straight,ccw_in_straight)
+			-- set_motor(kilo_turn_right,0)
+			set_motor(kilo_straight_right,kilo_straight_left)
 			 
 			-- send message
 			-- message_out(2,3,4)
