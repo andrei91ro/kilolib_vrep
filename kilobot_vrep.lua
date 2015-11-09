@@ -41,7 +41,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		-- Andrei G. Florea --curent kilolib (kilobotics.com) adapted version
 		-- 09 November 2015
 		
-		-- Add your own program in function user_prgm() , after the comment "user program code goes below"
+		-- Add your own program in function loop() , after the comment "user program code goes below"
 	
 	if (simGetScriptExecutionCount()==0) then 
 	
@@ -85,8 +85,21 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		kilo_turn_left    = 200 -- value for ccw motor to turn the robot ccw in place (note: cw motor should be off) 
 		kilo_straight_right  = 200 -- value for the cw motor to move the robot in the forward direction
 		kilo_straight_left = 200 -- value for the ccw motor to move the robot in the forward direction 
-	
-	
+
+		DELAY_BLINK = 100 --ms
+		blink_in_progress = 0
+		timexp_blink = 0
+
+		-- enum directions
+		DIR_STOP = 0
+		DIR_STRAIGHT = 1
+		DIR_LEFT = 2
+		DIR_RIGHT = 3
+
+		--direction global vars
+		direction = DIR_STOP
+		direction_prev = DIR_STOP
+
 	    -- for battery management
 		battery_init = 8000000  -- battery initial charged value
 		battery =  battery_init	-- battery simulator (~5h with 2 motors and 3 colors at 1 level)
@@ -106,7 +119,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		-- It is called when the reset button of the controller is pushed.
 		reset_substate	= 0
 	
-		function run_reset()
+		function setup()
 			robot_id = math.random(0, 255) -- reset robot id
 			-- below are variable to be reset for demo:
 			substate1=0
@@ -138,7 +151,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		-- Functions similar to C API
 		-------------------------------------------------------------------------------------------------------------------------------------------	
 		
-		function user_prgm()
+		function loop()
 		--/////////////////////////////////////////////////////////////////////////////////////
 		--//user program code goes below.  this code needs to exit in a resonable amount of time
 		--//so the special message controller can also run
@@ -155,8 +168,9 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 	
 			-- Set speed
 			-- set_motor(kilo_turn_right,0)
-			set_motor(kilo_straight_right,kilo_straight_left)
-			 
+			--set_motor(kilo_straight_right,kilo_straight_left)
+			set_motion(DIR_STRAIGHT)
+
 			-- send message
 			-- message_out(2,3,4)
 	
@@ -196,8 +210,8 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 			else
 				set_color(0,0,0)
 			end
-	  
-		
+
+			blink(0, 1, 0)
 		--////////////////////////////////////////////////////////////////////////////////////
 		--//END OF USER CODE
 		--////////////////////////////////////////////////////////////////////////////////////
@@ -205,6 +219,34 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		
 		-------------------------------------------------------------------------------------------------------------------------------------------
 		
+		-- Set direction of motion (DIR_STOP, DIR_STRAIGHT, DIR_LEFT, DIR_RIGHT)
+		function set_motion(dir_new)
+			if (dir_new == DIR_STOP) then
+				set_motor(0, 0)
+
+			elseif (dir_new == DIR_STRAIGHT) then
+				set_motor(kilo_straight_right, kilo_straight_left)
+
+			elseif (dir_new == DIR_LEFT) then
+				set_motor(0, kilo_turn_left)
+
+			elseif (dir_new == DIR_RIGHT) then
+				set_motor(kilo_turn_right, 0)
+			end
+
+
+			direction_prev = direction
+			direction = dir_new
+		end
+
+		function blink(r, g, b)
+			blink_in_progress = 1
+			simAddStatusbarMessage("<-- time = ".. simGetSimulationTime());
+			timexp_blink = simGetSimulationTime() + DELAY_BLINK / 1000.0
+			simAddStatusbarMessage("-- timexp_blink = ".. timexp_blink);
+			set_color(r, g, b)
+		end
+
 		-- Set motor speed PWM values for motors between 0 (off) and 255 (full on, ~ 1cm/s) for cw_motor and ccw_motor 
 		function set_motor (cw_motor,ccw_motor)
 		-- Set speed
@@ -222,7 +264,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 			end
 	
 		end
-	
+
 		-- Set LED color, values can be from 0(off)-3(brightest) 
 		function set_color(r,g,b)
 			simSetShapeColor(colorCorrectionFunction(BaseHandle),"BODY",0,{r*0.6/3.0+0.1, g*0.6/3.0+0.1, b*0.6/3.0+0.1})
@@ -535,7 +577,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 			if (reset_substate==0)	then
 			--reset
 			enable_tx=0
-			run_reset()
+			setup()
 			run_program = 0
 			special_mode_message = 0x08
 			reset_substate = reset_substate + 1
@@ -560,7 +602,15 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 	if(run_program==1) then
 		
 		--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." process Run") 
-		user_prgm()
+		if (blink_in_progress == 1) then
+			if (simGetSimulationTime() >= timexp_blink) then
+				simAddStatusbarMessage("--> time = ".. simGetSimulationTime());
+				blink_in_progress = 0;
+				set_color(0, 0, 0);
+			end
+		else
+			loop()
+		end
 	
 	end
 	
