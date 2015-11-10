@@ -86,6 +86,22 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		kilo_straight_right  = 200 -- value for the cw motor to move the robot in the forward direction
 		kilo_straight_left = 200 -- value for the ccw motor to move the robot in the forward direction 
 
+
+		-- message synopsys (follows kilobotics.com/message.h):
+		-- msg = {type, data} where
+		-- 		msg_type = uint8_t (MSG_TYPE_* see below)
+		-- 		data = uint8_t[9] (table of 9 uint8_t)
+
+
+		--special message codes (message_type_t)
+		MSG_TYPE_NORMAL = 0
+		MSG_TYPE_PAUSE = 4
+		MSG_TYPE_VOLTAGE = 5
+		MSG_TYPE_RUN = 6
+		MSG_TYPE_CHARGE = 7
+		MSG_TYPE_RESET = 8
+
+		--blink auxiliaries
 		DELAY_BLINK = 100 --ms
 		blink_in_progress = 0
 		timexp_blink = 0
@@ -118,7 +134,23 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		-- You should put your inital variable you would like to reset inside this function for your program.
 		-- It is called when the reset button of the controller is pushed.
 		reset_substate	= 0
-	
+
+		--called for each received message (of type == MSG_TYPE_NORMAL)
+		-- @param msg_data (uint8_t[9] in C) : data contained in the message
+		-- @param distance (uint8_t in C) : measured distance from the sender
+		function message_rx(msg_data, distance)
+			simAddStatusbarMessage("Message received with distaince = " .. distance)	
+		end
+
+		--called to construct every sent message
+		--should be restricted to a 9 unsigned int table (as is the case for real kilobots)
+		--@return msg = {type, data} where
+		-- 		msg_type = uint8_t (MSG_TYPE_* see synopsys)
+		-- 		data = uint8_t[9] (table of 9 uint8_t)
+		function message_tx()
+			return {msg_type=MSG_TYPE_NORMAL, data={0, 0, 0, 0, 0, 0, 0, 0, 0}}
+		end
+
 		function setup()
 			robot_id = math.random(0, 255) -- reset robot id
 			-- below are variable to be reset for demo:
@@ -177,9 +209,9 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 	
 			-- receive message and process it
 			--get_message()
-			if (message_rx[6]==1) then
+			--if (message_rx[6]==1) then
 				-- process your message
-			end
+			--end
 	
 			-- get distance to nearest obsctacle
 			result,distance,detectedPoint,detectedObjectHandle,detectedSurfaceNormalVector=simReadProximitySensor(sensorHandle)
@@ -293,7 +325,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		end
 	
 		-- received message
-		message_rx = {0,0,0,0,0,0};
+		--message_rx = {0,0,0,0,0,0};
 		enable_tx = 0 -- to turn on/off the transmitter
 		senderID = nil
 	
@@ -303,25 +335,25 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		function get_message()		
 			if (data ~= nil) then
 				udata=simUnpackInts(data)
-				message_rx[1]=udata[1]
-				message_rx[2]=udata[2]
-				message_rx[3]=udata[3]
+				--message_rx[1]=udata[1]
+				--message_rx[2]=udata[2]
+				--message_rx[3]=udata[3]
 				--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." "..message_rx[1].." "..message_rx[2].." "..message_rx[3])
 				
 				result,distance,detectedPoint,detectedObjectHandle,detectedSurfaceNormalVector=simCheckProximitySensor(sensorHandle,senderHandle)
 				
 				if (result == 1) then
 					
-					message_rx[4]=(distance+half_diam)*1000  -- distance in mm + 1/2diameter of robot
+					--message_rx[4]=(distance+half_diam)*1000  -- distance in mm + 1/2diameter of robot
 	
-					message_rx[6]=1	-- message receveid
+					--message_rx[6]=1	-- message receveid
 	
 				else
-					message_rx[6]=0 -- no message receveid
+					--message_rx[6]=0 -- no message receveid
 				end			
 	
 			else
-				message_rx[6]=0 -- no message receveid
+				--message_rx[6]=0 -- no message receveid
 			end
 	
 		end
@@ -338,15 +370,22 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 			if (data ~= nil) then
 				senderHandle= simGetObjectAssociatedWithScript(senderID)
 				udata=simUnpackInts(data)
-				message_rx[1]=udata[1]
-				message_rx[2]=udata[2]
-				message_rx[3]=udata[3]
+				
+				--reconstruct message structure
+				message = {msg_type = udata[1], 
+							data = {udata[2], udata[3], udata[4], udata[5], udata[6], udata[7], udata[8], udata[9], udata[10]}}
+
+				simAddStatusbarMessage("message[msg_type] = " .. message["msg_type"]);
+				--simAddStatusbarMessage("message[4] = " .. message["data"][4]);
+				--message_rx[1]=udata[1]
+				--message_rx[2]=udata[2]
+				--message_rx[3]=udata[3]
 	
 				--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." received:"..message_rx[1]..message_rx[2]..message_rx[3].." from "..simGetScriptName(senderID))
 				--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." received from "..simGetScriptName(senderID))
 				-- special message
-				if (message_rx[3] == 0x1) then
-					special_mode_message=message_rx[2]
+				if (message["msg_type"] > MSG_TYPE_NORMAL) then
+					special_mode_message = message["msg_type"]
 					special_mode = 1
 	
 					--if (special_mode_message == 6	) then
@@ -358,7 +397,17 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 					--elseif (special_mode_message == 7	) then
 					--	simAddStatusbarMessage(simGetScriptName(sim_handle_self).." received 'Charge'") 
 					--end
-	
+				else
+					--normal message processing
+
+					result, distance, detectedPoint = simCheckProximitySensor(sensorHandle,senderHandle)
+					
+					-- if the distance was extracted corectly
+					if (result == 1) then
+						distance = (distance + half_diam) * 1000  -- distance in mm + 1/2diameter of robot
+						-- send the message contents to user processing with distance
+						message_rx(message["data"], distance)
+					end
 				end
 			else	
 				--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." no received data")
