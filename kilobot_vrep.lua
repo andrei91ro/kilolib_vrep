@@ -139,7 +139,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		-- @param msg_data (uint8_t[9] in C) : data contained in the message
 		-- @param distance (uint8_t in C) : measured distance from the sender
 		function message_rx(msg_data, distance)
-			simAddStatusbarMessage("Message received with distaince = " .. distance)	
+			simAddStatusbarMessage("Message[1] = " .. msg_data[1] .. " received with distance = " .. distance)
 		end
 
 		--called to construct every sent message
@@ -148,7 +148,13 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		-- 		msg_type = uint8_t (MSG_TYPE_* see synopsys)
 		-- 		data = uint8_t[9] (table of 9 uint8_t)
 		function message_tx()
-			return {msg_type=MSG_TYPE_NORMAL, data={0, 0, 0, 0, 0, 0, 0, 0, 0}}
+			simAddStatusbarMessage("Message built");
+			return {msg_type=MSG_TYPE_NORMAL, data={11, 22, 33, 44, 55, 66, 77, 88, 99}}
+		end
+
+		--called after each successfull message transmission
+		function message_tx_success()
+			simAddStatusbarMessage("Message sent");
 		end
 
 		function setup()
@@ -420,7 +426,17 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 			newir=simGetSimulationTime()
 			--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." enable_tx:"..enable_tx.."  irstart:"..irstart.."  newir:"..newir)
 			if ((enable_tx==1) and (newir-irstart>0.2)) then
-				simSendData(sim_handle_all,0,"Message",simPackInts({tx0,tx1,tx2}),MsgSensorsHandle,0.07,3.1415,3.1415*2,0.8)
+				local new_msg = message_tx() --the user function is resposible for composing the message
+
+				--serialize (msg_type, data[1], data[2], ... data[9]) and send message
+				simSendData(sim_handle_all,0,"Message",
+				simPackInts({new_msg["msg_type"], new_msg["data"][1], new_msg["data"][2], new_msg["data"][3], new_msg["data"][4], new_msg["data"][5],
+					new_msg["data"][6], new_msg["data"][7], new_msg["data"][8], new_msg["data"][9]}),
+				MsgSensorsHandle,0.07,3.1415,3.1415*2,0.8)
+
+				--message transmission ok => notify the user
+				message_tx_success()
+
 				--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." sent a mesage")
 				irstart=newir
 	        end 
