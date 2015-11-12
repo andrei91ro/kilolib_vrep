@@ -166,8 +166,8 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		--You should put your inital variable you would like to reset inside this function for your program.
 		function setup()
 			-- get unique robot id from "robotID" parameter
-			robot_id = simGetScriptSimulationParameter(sim_handle_self, "robotID", false)
-			simAddStatusbarMessage(simGetScriptName(sim_handle_self) .. ": robot_id=" .. robot_id)
+			kilo_uid = simGetScriptSimulationParameter(sim_handle_self, "robotID", false)
+			simAddStatusbarMessage(simGetScriptName(sim_handle_self) .. ": kilo_uid=" .. kilo_uid)
 		end	
 		
 		function loop()
@@ -394,7 +394,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		-------------------------------------------------
 		-- other initialisations
 	
-		--robot_id = math.random(0, 255) -- set robot id
+		--kilo_uid = math.random(0, 255) -- set robot id
 	
 		-- get number of other robots
 	
