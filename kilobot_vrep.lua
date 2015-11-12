@@ -130,11 +130,16 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		charge_rate=400 		-- charge rate
 		charge_max= battery_init-- battery_init*99.9/100 -- end of charge detection
 	
-		-------------------------------------------------------------------------------------------------------------------------------------------
-		-- You should put your inital variable you would like to reset inside this function for your program.
-		-- It is called when the reset button of the controller is pushed.
 		reset_substate	= 0
 
+		-------------------------------------------------------------------------------------------------------------------------------------------
+		--global variables
+		-------------------------------------------------------------------------------------------------------------------------------------------
+
+
+		-------------------------------------------------------------------------------------------------------------------------------------------
+		-- Functions similar to C API
+		-------------------------------------------------------------------------------------------------------------------------------------------
 		--called for each received message (of type == MSG_TYPE_NORMAL)
 		-- @param msg_data (uint8_t[9] in C) : data contained in the message
 		-- @param distance (uint8_t in C) : measured distance from the sender
@@ -157,37 +162,13 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 			simAddStatusbarMessage("Message sent");
 		end
 
+		--function called only once at simmulation start (or after clicking Reset from the controller)
+		--You should put your inital variable you would like to reset inside this function for your program.
 		function setup()
-			robot_id = math.random(0, 255) -- reset robot id
-			-- below are variable to be reset for demo:
-			substate1=0
-			KiloState = 0
-			KiloCounter = 0
-			State = 0
-			other_robots_id = {}
+			-- get unique robot id from "robotID" parameter
+			robot_id = simGetScriptSimulationParameter(sim_handle_self, "robotID", false)
+			simAddStatusbarMessage(simGetScriptName(sim_handle_self) .. ": robot_id=" .. robot_id)
 		end	
-	
-		
-		-------------------------------------------------------------------------------------------------------------------------------------------
-	
-		-- for demo
-		-- variables
-	    substate1=0
-		KiloState = 0
-		KiloCounter = 0
-		State = 0
-		other_robots_id = {}	
-		-- constants
-	    SLAVE 	= 1
-		MASTER	= 2
-		INIT	=	0
-		WAIT	=	1
-		PGMCODE	=	77
-		
-	
-		-------------------------------------------------------------------------------------------------------------------------------------------
-		-- Functions similar to C API
-		-------------------------------------------------------------------------------------------------------------------------------------------	
 		
 		function loop()
 		--/////////////////////////////////////////////////////////////////////////////////////
@@ -202,54 +183,35 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		--//  
 		--////////////////////////////////////////////////////////////////////////////////////
 	
-			simAddStatusbarMessage(simGetScriptName(sim_handle_self).." ambient light:"..get_ambient_light())
+			--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." ambient light:"..get_ambient_light())
 	
-			-- Set speed
-			-- set_motor(kilo_turn_right,0)
-			--set_motor(kilo_straight_right,kilo_straight_left)
 			set_motion(DIR_STRAIGHT)
-
-			-- send message
-			-- message_out(2,3,4)
-	
-	
-			-- receive message and process it
-			--get_message()
-			--if (message_rx[6]==1) then
-				-- process your message
-			--end
-	
-			-- get distance to nearest obsctacle
-			result,distance,detectedPoint,detectedObjectHandle,detectedSurfaceNormalVector=simReadProximitySensor(sensorHandle)
 	
 			if (distance ~= nil)  then 
 				distance= distance + half_diam
-				nameSuffix,kname=simGetNameSuffix(simGetObjectName(detectedObjectHandle))
 				-- if the obstacle is another robot, light up the robot	
-				if ((kname== "BatHold") or (kname== "Base")) then
-				  	if(distance < 0.033) then
-						set_color(3,3,3) --turn RGB LED White
-					elseif(distance < 0.040) then
-						set_color(3,0,0) --turn RGB LED Red
-					elseif(distance < 0.050) then
-					  set_color(3,3,0) --turn RGB LED Orange
-					elseif(distance < 0.060) then
-					  set_color(0,3,0) --turn RGB LED Green
-					elseif(distance < 0.070) then			
-					  set_color(0,3,1) --turn RGB LED Turquoise
-					elseif(distance < 0.080) then
-						set_color(0,0,3) --turn RGB LED Blue
-					elseif(distance < 0.090) then
-						set_color(3,0,3) --turn RGB LED Violet					
-					else
-						set_color(0,0,0)	 
-					end 	
+				if(distance < 33) then
+					set_color(3,3,3) --turn RGB LED White
+				elseif(distance < 40) then
+					set_color(3,0,0) --turn RGB LED Red
+				elseif(distance < 50) then
+					set_color(3,3,0) --turn RGB LED Orange
+				elseif(distance < 60) then
+					set_color(0,3,0) --turn RGB LED Green
+				elseif(distance < 70) then
+					set_color(0,3,1) --turn RGB LED Turquoise
+				elseif(distance < 80) then
+					set_color(0,0,3) --turn RGB LED Blue
+				elseif(distance < 90) then
+					set_color(3,0,3) --turn RGB LED Violet
+				else
+					set_color(0,0,0)
 				end
 			else
 				set_color(0,0,0)
 			end
 
-			blink(0, 1, 0)
+			--blink(0, 1, 0)
 		--////////////////////////////////////////////////////////////////////////////////////
 		--//END OF USER CODE
 		--////////////////////////////////////////////////////////////////////////////////////
@@ -257,7 +219,19 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		
 		-------------------------------------------------------------------------------------------------------------------------------------------
 		
-		-- Set direction of motion (DIR_STOP, DIR_STRAIGHT, DIR_LEFT, DIR_RIGHT)
+	    -- Returns the value of ambient light
+		function get_ambient_light()
+			result,auxValues1,auxValues2=simReadVisionSensor(visionHandle)
+			if (auxValues1) then
+
+				return auxValues1[11] -- return average intensity
+			else
+				return -1
+			end
+		end
+
+		-- Set direction of motion
+		-- @param dir_new : new direction to go, one of (DIR_STOP, DIR_STRAIGHT, DIR_LEFT, DIR_RIGHT)
 		function set_motion(dir_new)
 			if (dir_new == DIR_STOP) then
 				set_motor(0, 0)
@@ -277,16 +251,20 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 			direction = dir_new
 		end
 
+		--blinks LED for DELAY_BLINK interval
+		-- @param r : red value (0-3)
+		-- @param g : green value (0-3)
+		-- @param b : blue value (0-3)
 		function blink(r, g, b)
 			blink_in_progress = 1
-			simAddStatusbarMessage("<-- time = ".. simGetSimulationTime());
+			--simAddStatusbarMessage("<-- time = ".. simGetSimulationTime());
 			timexp_blink = simGetSimulationTime() + DELAY_BLINK / 1000.0
-			simAddStatusbarMessage("-- timexp_blink = ".. timexp_blink);
+			--simAddStatusbarMessage("-- timexp_blink = ".. timexp_blink);
 			set_color(r, g, b)
 		end
 
 		-- Set motor speed PWM values for motors between 0 (off) and 255 (full on, ~ 1cm/s) for cw_motor and ccw_motor 
-		function set_motor (cw_motor,ccw_motor)
+		function set_motor(cw_motor,ccw_motor)
 		-- Set speed
 			simSetJointTargetVelocity(RightMotorHandle,ccw_motor*RATIO_MOTOR)
 			simSetJointTargetVelocity(LeftMotorHandle,cw_motor*RATIO_MOTOR)
@@ -303,70 +281,25 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 	
 		end
 
-		-- Set LED color, values can be from 0(off)-3(brightest) 
+		-- Set LED color
+		-- @param r : red value (0-3)
+		-- @param g : green value (0-3)
+		-- @param b : blue value (0-3)
 		function set_color(r,g,b)
 			simSetShapeColor(colorCorrectionFunction(BaseHandle),"BODY",0,{r*0.6/3.0+0.1, g*0.6/3.0+0.1, b*0.6/3.0+0.1})
 			lighting=r+g+b
 		end
 	
-		-- Print integer over StatusbarMessage (serial port for real robot) - be careful can effect timing! 
-		function kprinti(int)
-			simAddStatusbarMessage(int)
-		end
+		-------------------------------------------------------------------------------------------------------------------------------------------
+		-- END Functions similar to C API
+		-------------------------------------------------------------------------------------------------------------------------------------------
 	
-		-- Print string up to 10 characters - be careful, can effect timing! 
-		function  kprints(string)
-			simAddStatusbarMessage(string)
-		end
-	
-		-- Set message values to be sent over IR, 3 bytes
-		-- tx0,tx1,tx2 (tx2 lsb must not be used)
-		tx0=0
-		tx1=0
-		tx2=0
-		function message_out(_tx0,_tx1,_tx2)
-		  tx0=_tx0
-		  tx1=_tx1
-		  tx2=_tx2	
-		end
-	
-		-- received message
-		--message_rx = {0,0,0,0,0,0};
 		enable_tx = 0 -- to turn on/off the transmitter
 		senderID = nil
 	
-		-- Take oldest message off of rx buffer message. It is only new if message_rx[5]==1
-	    -- If so, message is in message_rx[0] and message_rx[1] 
-	    -- distance to transmitting robot (in mm) is in message_rx[3].
-		function get_message()		
-			if (data ~= nil) then
-				udata=simUnpackInts(data)
-				--message_rx[1]=udata[1]
-				--message_rx[2]=udata[2]
-				--message_rx[3]=udata[3]
-				--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." "..message_rx[1].." "..message_rx[2].." "..message_rx[3])
-				
-				result,distance,detectedPoint,detectedObjectHandle,detectedSurfaceNormalVector=simCheckProximitySensor(sensorHandle,senderHandle)
-				
-				if (result == 1) then
-					
-					--message_rx[4]=(distance+half_diam)*1000  -- distance in mm + 1/2diameter of robot
-	
-					--message_rx[6]=1	-- message receveid
-	
-				else
-					--message_rx[6]=0 -- no message receveid
-				end			
-	
-			else
-				--message_rx[6]=0 -- no message receveid
-			end
-	
-		end
-		
 		special_mode = 1
 		run_program = 0
-		special_mode_message = 3
+		special_mode_message = MSG_TYPE_RESET --start the robot with a reset (to call setup() only once during start-up)
 	
 		function receive_data()
 			-- receive latest message and process it
@@ -381,28 +314,13 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 				message = {msg_type = udata[1], 
 							data = {udata[2], udata[3], udata[4], udata[5], udata[6], udata[7], udata[8], udata[9], udata[10]}}
 
-				simAddStatusbarMessage("message[msg_type] = " .. message["msg_type"]);
-				--simAddStatusbarMessage("message[4] = " .. message["data"][4]);
-				--message_rx[1]=udata[1]
-				--message_rx[2]=udata[2]
-				--message_rx[3]=udata[3]
-	
-				--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." received:"..message_rx[1]..message_rx[2]..message_rx[3].." from "..simGetScriptName(senderID))
-				--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." received from "..simGetScriptName(senderID))
+				--simAddStatusbarMessage("message[msg_type] = " .. message["msg_type"]);
+
 				-- special message
 				if (message["msg_type"] > MSG_TYPE_NORMAL) then
 					special_mode_message = message["msg_type"]
 					special_mode = 1
 	
-					--if (special_mode_message == 6	) then
-					--	simAddStatusbarMessage(simGetScriptName(sim_handle_self).." received 'Run'") 
-					--elseif (special_mode_message == 4	) then
-					--	simAddStatusbarMessage(simGetScriptName(sim_handle_self).." received 'Pause'") 
-					--elseif (special_mode_message == 5	) then
-					--	simAddStatusbarMessage(simGetScriptName(sim_handle_self).." received 'Disp Bat'") 
-					--elseif (special_mode_message == 7	) then
-					--	simAddStatusbarMessage(simGetScriptName(sim_handle_self).." received 'Charge'") 
-					--end
 				else
 					--normal message processing
 
@@ -422,17 +340,16 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 	
 		irstart=simGetSimulationTime()
 	
-		function send_data() -- send data from ir every 0.2s, at a max distance of 7cm
+		function send_data() -- send data from ir every 0.2s, at a max distance of 7cm (ONLY if kilobot is in normal running state)
 			newir=simGetSimulationTime()
 			--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." enable_tx:"..enable_tx.."  irstart:"..irstart.."  newir:"..newir)
-			if ((enable_tx==1) and (newir-irstart>0.2)) then
+			if ((enable_tx==1) and (newir-irstart>0.2) and (run_program == 1)) then
 				local new_msg = message_tx() --the user function is resposible for composing the message
-
 				--serialize (msg_type, data[1], data[2], ... data[9]) and send message
 				simSendData(sim_handle_all,0,"Message",
-				simPackInts({new_msg["msg_type"], new_msg["data"][1], new_msg["data"][2], new_msg["data"][3], new_msg["data"][4], new_msg["data"][5],
-					new_msg["data"][6], new_msg["data"][7], new_msg["data"][8], new_msg["data"][9]}),
-				MsgSensorsHandle,0.07,3.1415,3.1415*2,0.8)
+					simPackInts({new_msg["msg_type"], new_msg["data"][1], new_msg["data"][2], new_msg["data"][3], new_msg["data"][4], new_msg["data"][5],
+						new_msg["data"][6], new_msg["data"][7], new_msg["data"][8], new_msg["data"][9]}),
+					MsgSensorsHandle,0.07,3.1415,3.1415*2,0.8)
 
 				--message transmission ok => notify the user
 				message_tx_success()
@@ -474,24 +391,10 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 			return 0
 		end
 	
-	
-	
-	
-	    -- Returns the value of ambient light
-		function get_ambient_light()
-			result,auxValues1,auxValues2=simReadVisionSensor(visionHandle)
-			if (auxValues1) then
-				
-				return auxValues1[11] -- return average intensity
-			else
-				return -1
-			end
-		end
-	
 		-------------------------------------------------
 		-- other initialisations
 	
-		robot_id = math.random(0, 255) -- set robot id
+		--robot_id = math.random(0, 255) -- set robot id
 	
 		-- get number of other robots
 	
@@ -550,7 +453,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 		  -- sleep	
 			wakeup=0
 			--enter_sleep();//will not return from enter_sleep() untill a special mode message 0x03 is received	
-		elseif((special_mode_message==0x03)or(special_mode_message==0x04)) then
+		elseif((special_mode_message==0x03)or(special_mode_message==MSG_TYPE_PAUSE)) then
 		  --wakeup / Robot on, but does nothing active
 			enable_tx=0
 			
@@ -578,7 +481,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 			enable_tx=1
 			special_mode=1
 		
-		elseif(special_mode_message==0x05) then
+		elseif(special_mode_message==MSG_TYPE_VOLTAGE) then
 		 -- display battery voltage
 			enable_tx=0
 	
@@ -594,7 +497,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 	
 			enable_tx=1
 			--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." Voltage: "..measure_voltage().."  battery:"..battery)
-		elseif (special_mode_message==0x06) then
+		elseif (special_mode_message==MSG_TYPE_RUN) then
 			--execute program code
 			enable_tx=1
 			run_program=1
@@ -602,7 +505,7 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 			--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." special mode Run") 
 			--no code here, just allows special_mode to end 
 	
-		elseif (special_mode_message==0x07) then
+		elseif (special_mode_message==MSG_TYPE_CHARGE) then
 		 --battery charge
 			enable_tx=0
 			--if(measure_charge_status()==1) then
@@ -637,14 +540,14 @@ if (sim_call_type==sim_childscriptcall_actuation) then
 	
 	
 			enable_tx=1
-		elseif (special_mode_message==0x08) then
+		elseif (special_mode_message==MSG_TYPE_RESET) then
 			
 			if (reset_substate==0)	then
 			--reset
 			enable_tx=0
 			setup()
 			run_program = 0
-			special_mode_message = 0x08
+			special_mode_message = MSG_TYPE_RESET
 			reset_substate = reset_substate + 1
 			-- wait some time for stopping messages
 			--simAddStatusbarMessage(simGetScriptName(sim_handle_self).." start resetting") 
