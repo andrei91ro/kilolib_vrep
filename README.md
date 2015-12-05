@@ -1,6 +1,6 @@
 Personal adaptation of the V-REP child script for the Kilobot (and controller) provided by K-TEAM in order to use the newer Kilolib C API in the V-REP simulator.
 
-The following functions are available to the user (similar to those from kilolib):
+The following functions are available to the user (similar to those from kilolib, see https://www.kilobotics.com/labs for a step by step introduction):
  * message_rx()
  * message_tx()
  * message_tx_success()
