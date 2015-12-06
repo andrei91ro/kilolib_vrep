@@ -16,3 +16,4 @@ Acknowledgments
 
  * The original version of the 2 child scripts was provided by K-TEAM (http://www.k-team.com) on the Kilobot Manuals/Downloads page (http://www.k-team.com/mobile-robotics-products/kilobot/manuals-downloads)
  * The Kilolib C API created by Alex Cornejo (acornejo) was the main inspiration source and is available at https://github.com/acornejo/kilolib
+ * The author is affiliated with the Department of Automatic Control and Systems Engineering (http://acse.pub.ro) of the Politehnica University of Bucharest as a Ph.D. student.
