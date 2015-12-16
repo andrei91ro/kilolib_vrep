@@ -12,6 +12,9 @@ The following functions are available to the user (similar to those from kilolib
  * set_motor()
  * set_color()
 
+A default scene containing two Kilobots and one controller is provided. The unique id of each robot can be set through the use of the robotID parameter.
+In code the unique id is accessible as kilo_uid as in the Kilolib (C), see setup() for details.
+
 Acknowledgments
 
  * The original version of the 2 child scripts was provided by K-TEAM (http://www.k-team.com) on the Kilobot Manuals/Downloads page (http://www.k-team.com/mobile-robotics-products/kilobot/manuals-downloads)
